@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+.tools/
+*.log
+*.tsbuildinfo
+.env*
+!.env.example
+tmp-aws.zip
+*.zip
+.idea/
+.vscode/

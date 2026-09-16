@@ -1,0 +1,67 @@
+.common-header {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  height: 87px;
+  padding: 0 32px 0 35px;
+  background: #000;
+  color: #ddd;
+}
+.common-logo {
+  flex-shrink: 0;
+  width: 162px;
+  height: 36px;
+  margin-right: 27px;
+  border-radius: 3px;
+  background: #d9d9d9;
+  color: #111;
+  text-align: center;
+  font-size: 24px;
+  line-height: 36px;
+}
+.common-navigation { display: flex; align-items: center; gap: 48px; }
+.common-navigation a, .common-navigation button { font-size: 16px; white-space: nowrap; }
+.common-navigation button:disabled { color: #bbb; cursor: default; }
+.common-navigation a:hover { color: #fff; text-decoration: underline; }
+.common-search {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 28px;
+  width: 228px;
+  height: 44px;
+  margin-left: auto;
+  padding: 8px 14px;
+  border-radius: 24px;
+  background: #e9e9e9;
+  color: #171717;
+}
+.common-search svg { flex-shrink: 0; width: 24px; height: 24px; }
+.common-search input { width: 100%; min-width: 0; background: transparent; font-size: 18px; }
+.common-search input:focus { outline: none; }
+.common-search:focus-within { outline: 2px solid white; outline-offset: 4px; }
+.common-profile { flex-shrink: 0; }
+.common-profile .common-avatar { width: 52px; height: 52px; }
+
+@media (max-width: 1200px) {
+  .common-header { gap: 24px; padding-inline: 24px; }
+  .common-logo { width: 126px; margin-right: 0; }
+  .common-navigation { gap: 28px; }
+  .common-search { width: 200px; gap: 14px; }
+}
+@media (max-width: 950px) {
+  .common-header { gap: 18px; padding-inline: 20px; }
+  .common-navigation { gap: 18px; }
+  .common-navigation a, .common-navigation button { font-size: 14px; }
+  .common-logo { width: 105px; font-size: 20px; }
+  .common-search { width: 165px; }
+  .common-profile .common-avatar { width: 36px; height: 36px; }
+}
+@media (max-width: 760px) {
+  .common-header { height: auto; flex-wrap: wrap; gap: 18px; padding: 18px 16px; }
+  .common-navigation { order: 4; width: 100%; justify-content: space-between; gap: 14px; overflow-x: auto; padding-bottom: 4px; }
+  .common-search { width: min(180px, 40vw); height: 36px; }
+  .common-search input { font-size: 16px; }
+  .common-profile .common-avatar { width: 30px; height: 30px; }
+  .common-logo { width: 78px; height: 30px; font-size: 18px; line-height: 30px; }
+}

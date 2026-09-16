@@ -1,0 +1,75 @@
+/* 홈 페이지 전용 스타일. main- 접두사로 공통 UI 스타일과 구분합니다. */
+.main-view { width: min(100%, 1440px); margin-inline: auto; background: #000; }
+.main-hero { width: 100%; height: 688px; background: #d9d9d9; }
+.main-features {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 25px;
+  padding: 41px 18px 0 22px;
+}
+.main-feature { height: 129px; padding: 13px 17px; border-radius: 2px; background: #ddd; color: #000; }
+.main-feature h2 { font-size: 24px; line-height: 29px; font-weight: 600; white-space: nowrap; }
+.main-feature p { margin-top: 3px; font-size: 14px; line-height: 17px; color: #929292; }
+.main-browse { margin-top: 124px; padding-inline: 22px; scroll-margin-top: 20px; }
+.main-browse > h2 { font-family: Arial, sans-serif; font-size: 24px; line-height: 29px; font-weight: 400; }
+.main-categories {
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  overflow-x: auto;
+  padding-top: 22px;
+  border-bottom: 1px solid #8b8b8b;
+  scrollbar-color: #777 #171717;
+}
+.main-categories button { flex-shrink: 0; padding-bottom: 22px; font-size: 16px; line-height: 19px; color: #858585; }
+.main-categories button[aria-pressed="true"] { color: #ddd; }
+.main-categories button:hover { color: #fff; }
+.main-component-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 47px; max-width: 1181px; margin: 48px auto 0; }
+.main-component-card { display: flex; align-items: flex-end; height: 298px; padding: 12px 15px; background: #ddd; color: #454545; }
+.main-author { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.main-empty { height: 344px; padding: 90px 20px; text-align: center; color: #bdbdbd; }
+.main-empty button { margin-top: 20px; padding: 10px 16px; border: 1px solid #aaa; color: white; }
+.main-trending { padding-top: 90px; padding-bottom: 86px; }
+.main-trending h2 { margin-bottom: 32px; text-align: center; font-family: Arial, sans-serif; font-size: 32px; line-height: 38px; font-weight: 400; }
+.main-trending-track { display: flex; align-items: center; justify-content: center; gap: 12px; overflow: hidden; height: 256px; }
+.main-trending-track > div { flex: 0 0 176px; height: 173px; background: #aaa; }
+.main-trending-track > div:nth-child(3),
+.main-trending-track > div:nth-child(5) { flex-basis: 202px; height: 212px; background: #c4c4c4; margin-inline: -12px; }
+.main-trending-track > div:nth-child(4) { position: relative; z-index: 1; flex-basis: 388px; height: 256px; background: #d9d9d9; }
+
+@media (max-width: 1200px) {
+  .main-hero { height: auto; aspect-ratio: 1440 / 688; }
+  .main-features { gap: 18px; padding-top: 32px; }
+  .main-feature { padding-inline: 13px; }
+  .main-feature h2 { font-size: 20px; }
+  .main-browse { margin-top: 90px; }
+  .main-component-grid { gap: 36px; margin-inline: 6%; }
+  .main-component-card { height: auto; aspect-ratio: 260 / 298; }
+}
+@media (max-width: 950px) {
+  .main-features { gap: 12px; }
+  .main-feature h2 { font-size: 16px; }
+  .main-feature p { font-size: 12px; line-height: 16px; }
+  .main-component-grid { gap: 24px; }
+}
+@media (max-width: 760px) {
+  .main-hero { min-height: 260px; }
+  .main-features { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-inline: 16px; }
+  .main-feature { height: 120px; }
+  .main-feature h2 { font-size: 18px; }
+  .main-feature:last-child { grid-column: 1 / -1; }
+  .main-browse { margin-top: 50px; padding-inline: 16px; }
+  .main-browse > h2 { font-size: 22px; }
+  .main-categories { gap: 24px; }
+  .main-categories button { font-size: 14px; padding-bottom: 16px; }
+  .main-component-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin: 26px 0 0; }
+  .main-author { gap: 6px; font-size: 11px; }
+  .main-author .common-avatar { width: 28px; height: 28px; }
+  .main-trending { padding-top: 52px; padding-bottom: 40px; }
+  .main-trending h2 { font-size: 28px; }
+  .main-trending-track { height: 155px; gap: 6px; }
+  .main-trending-track > div { flex-basis: 25%; height: 100px; }
+  .main-trending-track > div:nth-child(3),
+  .main-trending-track > div:nth-child(5) { flex-basis: 28%; height: 125px; margin-inline: -6px; }
+  .main-trending-track > div:nth-child(4) { flex-basis: 45%; height: 155px; }
+}
