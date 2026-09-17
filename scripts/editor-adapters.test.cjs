@@ -1,0 +1,37 @@
+const assert = require("node:assert/strict");
+const fs=require("node:fs"),path=require("node:path"),ts=require("typescript");
+const source=fs.readFileSync(path.join(__dirname,"../app/editor/_lib/adapters.ts"),"utf8");
+const output=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const moduleValue={exports:{}};
+new Function("module","exports","require",output)(moduleValue,moduleValue.exports,require);
+const {planProject,detectRoots,toTree}=moduleValue.exports;
+const files=deps=>({"/package.json":JSON.stringify({dependencies:deps,scripts:{dev:"test"}})});
+assert(planProject(files({next:"16.3.5"}),"").args.includes("--webpack"));
+assert(!planProject(files({next:"15.3.0"}),"").args.includes("--webpack"));
+assert.equal(planProject(files({vite:"6",vue:"3"}),"").name,"Vue · Vite");
+assert.equal(planProject(files({vite:"6",svelte:"5"}),"").name,"Svelte · Vite");
+assert.equal(planProject(files({nuxt:"3"}),"").name,"Nuxt");
+assert.equal(planProject(files({"@angular/cli":"20"}),"").name,"Angular");
+assert.equal(planProject(files({astro:"5"}),"").name,"Astro");
+assert.equal(planProject({"/index.html":"Hello"},"").install,false);
+assert.throws(()=>planProject({"/app.py":"print()"},""),/package.json|실행 가능한/);
+assert.deepEqual(detectRoots({"/apps/web/package.json":"{}","/apps/web/index.html":""}),["/apps/web"]);
+assert.throws(()=>toTree({files:{"/../outside":"bad"}}),/안전하지/);
+assert.throws(()=>toTree({files:{"/C:/outside":"bad"}}),/안전하지/);
+assert.equal(toTree({files:{"/__proto__/test.js":"ok"}}).__proto__.directory["test.js"].file.contents,"ok");
+assert.deepEqual(planProject({...files({next:"16"}),"/app/(site)/about/page.tsx":""},"").routes,["/","/about"]);
+new Function(fs.readFileSync(path.join(__dirname,"../public/editor-bridge.js"),"utf8"));
+console.log("PASS: 14 framework, route, path containment and bridge syntax checks");
+const generated={exports:{}};
+new Function('module','exports',ts.transpileModule(fs.readFileSync(path.join(__dirname,'../app/editor/_lib/next-ui.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText)(generated,generated.exports);
+const original={files:{'/package.json':JSON.stringify({dependencies:{next:'16',react:'19'}}),'/app/layout.tsx':'layout','/app/(home)/page.tsx':'home','/app/about/page.tsx':'about'},source:{},skippedFileCount:0};
+const adapted=generated.exports.prepareNextUI(original,'');
+assert(adapted.files['/.polazu-ui/main.jsx'].includes('"/app/layout.tsx"'));
+assert(adapted.files['/.polazu-ui/main.jsx'].includes('"/about"'));
+assert(!JSON.parse(adapted.files['/package.json']).dependencies.next);
+assert(JSON.parse(original.files['/package.json']).dependencies.next);
+for(const name of ['main.jsx','next.jsx']) {
+ const result=ts.transpileModule(adapted.files['/.polazu-ui/'+name],{reportDiagnostics:true,compilerOptions:{jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}});
+ assert.equal(result.diagnostics?.length||0,0,name+' generated syntax');
+}
+console.log('PASS: Next UI generation, layouts, routes, source preservation and generated JSX syntax');

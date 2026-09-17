@@ -16,4 +16,7 @@ spring:
     enabled: true
 
 server:
+  # 현재 단계에서는 같은 PC에서만 접근할 수 있게 서버를 loopback 주소에 묶습니다.
+  address: 127.0.0.1
   port: 8080
+  max-http-request-header-size: 16KB

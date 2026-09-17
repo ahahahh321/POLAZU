@@ -1,7 +1,7 @@
 # tmp (interface-lab)
 
 Next.js 프론트엔드와 Spring Boot REST API 서버를 한 저장소에서 관리하는 프로젝트입니다.
-현재 백엔드는 기반 구조만 있으며 실제 서비스 API는 아직 구현하지 않았습니다.
+백엔드는 기반 구조와 로컬 공개 GitHub 가져오기 API를 제공합니다. 회원별 저장은 아직 없습니다.
 
 ## 기술 구성
 
@@ -187,6 +187,88 @@ V1__initialize_schema.sql
 V2__create_component_table.sql
 V3__add_component_category.sql
 ```
+
+## 로컬 Editor: 공개 GitHub 저장소 미리보기
+
+Editor는 공개 GitHub 저장소 또는 로컬 폴더를 읽고 브라우저 WebContainer에서 실행합니다.
+Spring 서버는 GitHub ZIP을 검사해 텍스트와 허용된 이미지/폰트를 전달할 뿐,
+가져온 코드를 서버에서 실행하거나 DB에 저장하지 않습니다. 로컬 폴더는 이 API를 거치지 않습니다.
+
+```powershell
+# 터미널 1
+.\start-backend.cmd
+
+# 터미널 2
+npm run dev
+```
+
+브라우저에서 `http://127.0.0.1:3000/editor/`를 열고 공개 GitHub 주소를 입력합니다.
+먼저 '데모로 시작하기'로 설치 없는 HTML 편집을 확인할 수 있습니다.
+GitHub 비공개 저장소, ZIP 직접 업로드, 원본 소스 수정·PR 생성은 아직 지원하지 않습니다.
+
+### 실행 방식과 편집 범위
+
+- HTML, Vite(React/Vue/Svelte), Next, Nuxt, Astro, Angular, CRA, Vue CLI 실행 명령을 감지합니다.
+  감지는 해당 프레임워크의 모든 버전/플러그인 실행을 보장하지 않습니다.
+- Next는 기본적으로 **클라이언트 UI 호환 모드**입니다. 가상 복사본에서 Vite로 페이지와
+  레이아웃을 렌더링하고 next/link·image·기본 navigation을 브라우저 동작으로 대체합니다.
+  원본 파일은 바꾸지 않습니다. SSR, async 서버 컴포넌트, Server Actions, 서버 API,
+  Next 폰트 최적화 및 모든 Next 확장 API의 동일 동작을 보장하지 않습니다.
+- '원본 Next 서버'는 실험적입니다. Next 16은 Webpack으로 실행하지만 브라우저 Node와
+  AsyncLocalStorage 등 런타임 호환 오류가 남을 수 있습니다. 오류 시 로그를 표시합니다.
+- Python/Java/PHP 서버, OS 바이너리, DB는 실행하지 않습니다. pnpm/yarn 전용 프로젝트는
+  npm 호환 여부가 필요하며 전용 workspace 구성을 완전히 지원하지 않습니다.
+- Design: DOM 레이어 선택, leaf 텍스트·색상·크기·여백 변경, 버튼 상태, 실행 취소/다시 실행.
+  Preview: 링크/버튼 동작, fetch/XHR Mock. 서버 측 요청은 Mock하지 않습니다.
+  규칙 없는 `/api/*` 및 GET/HEAD 이외 fetch/XHR 요청은 501로 막습니다.
+- 저장은 **현재 브라우저 localStorage**입니다. 내보내기는 DOM 수정 내역 JSON이며
+  원본 JSX/Vue/Svelte 파일을 변경하는 기능은 아닙니다. 소스 구조가 바뀌면 selector가 달라질 수 있습니다.
+- 로그인/팀별 저장, 실시간 공동 편집, DB 변경은 이번 범위에 포함하지 않습니다.
+
+### 보안 및 외부 의존성
+
+가져온 프로젝트는 신뢰할 수 있는 소스만 사용하세요. iframe은 에디터와 다른 origin이며
+메시지는 origin/source/token을 확인합니다. 설치 lifecycle 스크립트는 기본 차단합니다.
+단, 실행된 앱/번들러는 브라우저 실행 환경에서 네트워크 요청을 할 수 있습니다.
+Mock과 비밀 파일명 필터는 모든 정보 유출을 막는 보안 경계가 아닙니다.
+일반 소스 파일 안에 하드코딩된 키까지 탐지하지 않으므로 비밀을 포함한 폴더를 열지 마세요.
+
+WebContainer는 StackBlitz 런타임 인프라와 npm 다운로드에 의존합니다. 완전 오프라인/무외부 서비스가
+아니며 사용자 기기의 메모리와 CPU를 사용합니다. 상용 서비스 배포 전에는
+[WebContainer 라이선스 조건](https://webcontainers.io/enterprise)을 확인해야 합니다.
+로컬 검증용 구성이므로 지금 변경을 그대로 공용 서버에 공개하지 마세요.
+정적 호스팅 시 COOP/COEP 헤더 설정도 별도로 필요합니다.
+
+검사: `npm run typecheck`, `npm run build`, `node scripts/editor-adapters.test.cjs`,
+`backend/gradlew.bat test`. 브라우저 E2E는 Playwright 설치 환경에서
+`PLAYWRIGHT_MODULE`에 모듈 경로를 지정한 뒤 `node scripts/editor-e2e.cjs`를 실행합니다.
+추가 브리지 검사: `node scripts/bridge-probe.cjs`. 검증 브라우저는 Chrome입니다.
+
+2026-09-17 확인: 실제 POLAZU 공개 저장소의 Next UI 모드 렌더링, HTML 데모의
+75% 캔버스 선택·텍스트 수정·undo/redo·저장·버튼 상태·Mock·왕복 페이지 이동 통과.
+프레임워크 명령 감지/경로 안전성/Next UI 생성 단위 검사와 백엔드 테스트, 타입 검사,
+프로덕션 빌드 통과. Vue/Svelte/Angular/Nuxt/Astro 실제 앱 실행 및 다른 브라우저는 미검증입니다.
+
+### Editor GitHub 가져오기 API 계약
+
+```text
+POST /api/editor/import/github
+Content-Type: application/json
+인증: 현재 로컬 단계에서는 없음. 서버는 127.0.0.1에만 바인딩
+요청: { "repositoryUrl": "https://github.com/owner/repository", "ref": "main" }
+ref: 선택값. 없으면 GitHub 기본 브랜치 사용
+성공: 200, source·framework·files·dependencies·skippedFileCount·binaryFiles
+binaryFiles: 기존 응답에 추가된 { "/경로": "Base64" } 이미지/폰트 맵
+실패: 400 입력 오류, 404 저장소/ref 없음, 413 크기 제한, 422 미지원 프로젝트,
+      429 분당 요청 제한, 502 GitHub 오류
+보안 제한: github.com HTTPS 공개 저장소만 허용, ZIP 10MB, 가져온 파일 총 20MB,
+           파일 300개, 파일당 4MB, ZIP 항목 5,000개/해제 총 32MB,
+           분당 10회, 비밀/빌드/허용하지 않은 바이너리 파일 제외
+```
+
+응답의 binaryFiles 추가는 기존 필드를 유지하는 확장입니다. 팀 합의/리뷰 완료를 의미하지
+않으며 공용 배포 전 API 담당자 검토가 필요합니다. 비공개 저장소를 지원할 때는
+인증·소유권 계약을 먼저 추가해야 합니다. 현재 DB migration은 없습니다.
 
 ## 배포 참고
 
