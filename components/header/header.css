@@ -42,7 +42,13 @@
 .common-search input { width: 100%; min-width: 0; background: transparent; font-size: 18px; }
 .common-search input:focus { outline: none; }
 .common-search:focus-within { outline: 2px solid white; outline-offset: 4px; }
-.common-profile { flex-shrink: 0; }
+.common-profile {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  line-height: 0;
+}
+.common-profile:hover { outline: 2px solid #ff4d0a; outline-offset: 4px; }
 .common-profile .common-avatar { width: 52px; height: 52px; }
 
 @media (max-width: 1200px) {

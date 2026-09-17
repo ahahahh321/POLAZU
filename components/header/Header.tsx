@@ -37,9 +37,9 @@ export default function Header({ query = "", onSearch, activeNav = "Explore" }: 
           />
         </label>
       ) : <span className="common-header-spacer" aria-hidden="true" />}
-      <span className="common-profile" role="img" aria-label="프로필 자리">
+      <a className="common-profile" href="/mypage/" aria-label="마이페이지로 이동">
         <Avatar />
-      </span>
+      </a>
     </header>
   );
 }
