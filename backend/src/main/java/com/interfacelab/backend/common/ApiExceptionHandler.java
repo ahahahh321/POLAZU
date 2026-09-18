@@ -18,6 +18,12 @@ public class ApiExceptionHandler {
 				.body(ApiErrorResponse.of(exception.code(), exception.getMessage()));
 	}
 
+	@ExceptionHandler(com.interfacelab.backend.auth.exception.AuthException.class)
+	public ResponseEntity<ApiErrorResponse> handleAuth(com.interfacelab.backend.auth.exception.AuthException exception) {
+		return ResponseEntity.status(exception.status())
+				.body(ApiErrorResponse.of(exception.code(), exception.getMessage()));
+	}
+
 	@ExceptionHandler(MethodArgumentNotValidException.class)
 	public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
 		String message = exception.getBindingResult().getFieldErrors().stream()

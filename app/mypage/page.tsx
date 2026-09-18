@@ -15,8 +15,8 @@ export default function MyPage() {
       <Header />
       <main>
         <ProfileHero profile={state.profile} followerLabel={state.followerLabel} followingLabel={state.followingLabel} onEdit={() => state.setDialog("edit")} onFollowers={() => state.setDialog("followers")} onFollowing={() => state.setDialog("following")} />
-        <WorkspacePanels items={state.saved} onRemove={state.removeSaved} />
-        <div className="mypage-account-button-wrap"><button type="button" className="mypage-account-button" onClick={() => state.setDialog("account")}><span>계정 설정</span><small>이메일 · 언어 · 비밀번호 · 회원 탈퇴</small><b aria-hidden="true">→</b></button></div>
+        <WorkspacePanels items={state.saved} onRemove={state.removeSaved} activeTab={state.activeTab} onTabChange={state.setActiveTab} />
+        <div className="mypage-account-button-wrap"><button type="button" className="mypage-account-button" onClick={() => state.setDialog("account")}><span>Settings</span><small>Email · Language · Password · Delete Account</small><b aria-hidden="true">→</b></button></div>
       </main>
       {state.notice && <p className="mypage-toast" role="status">{state.notice}</p>}
       <MyPageDialog kind={state.dialog} profile={state.profile} account={state.account} onClose={() => state.setDialog(null)} onSave={(profile) => { state.setProfile(profile); state.showNotice("프로필 변경사항을 저장했어요."); }} onSaveAccount={state.setAccount} onOpenWithdraw={() => state.setDialog("withdraw")} onWithdraw={() => state.showNotice("현재는 탈퇴 요청 화면만 제공해요.")} onNotice={state.showNotice} />

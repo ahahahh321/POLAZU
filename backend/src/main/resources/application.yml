@@ -20,3 +20,9 @@ server:
   address: 127.0.0.1
   port: 8080
   max-http-request-header-size: 16KB
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
+

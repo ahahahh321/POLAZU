@@ -14,7 +14,7 @@ export default function HomePage() {
   return (
     <div className="main-view">
       <a href="#main-content" className="skip-link">본문으로 이동</a>
-      <Header query={query} onSearch={setQuery} />
+      <Header activeNav="Explore" query={query} onSearch={setQuery} />
       <main id="main-content">
         {/* Tailwind className의 sr-only는 제목을 화면 낭독기에만 보여 줍니다. */}
         <h1 className="sr-only">tmp — Main Page</h1>

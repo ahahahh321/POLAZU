@@ -7,6 +7,8 @@ import SavedGrid from "./SavedGrid";
 type WorkspacePanelsProps = {
   items: SavedItem[];
   onRemove: (id: number) => void;
+  activeTab?: number;
+  onTabChange?: (tab: number) => void;
 };
 
 type Category = {
@@ -35,8 +37,13 @@ const initialDownloads: SavedItem[] = [
   { id: 104, title: "Audio player", type: "MEDIA", colors: ["#f4f0ff", "#7f5af0"], likes: "12.1K", views: "9.6K" },
 ];
 
-export default function WorkspacePanels({ items, onRemove }: WorkspacePanelsProps) {
-  const [activeTab, setActiveTab] = useState(0);
+export default function WorkspacePanels({ items, onRemove, activeTab: externalTab, onTabChange }: WorkspacePanelsProps) {
+  const [internalTab, setInternalTab] = useState(0);
+  const activeTab = externalTab !== undefined ? externalTab : internalTab;
+  const setActiveTab = (index: number) => {
+    setInternalTab(index);
+    if (onTabChange) onTabChange(index);
+  };
   const [downloads, setDownloads] = useState(initialDownloads);
   const [componentCategories, setComponentCategories] = useState<Category[]>([]);
   const [downloadCategories, setDownloadCategories] = useState<Category[]>([]);

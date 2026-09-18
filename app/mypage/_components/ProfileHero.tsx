@@ -12,12 +12,12 @@ type ProfileHeroProps = {
 };
 
 export default function ProfileHero({ profile, followerLabel, followingLabel, onEdit, onFollowers, onFollowing }: ProfileHeroProps) {
-  const initials = profile.name.split(" ").map((word) => word[0]).join("").slice(0, 2);
+  const initial = profile.name ? profile.name.trim().charAt(0).toUpperCase() : "U";
 
   return (
     <section className="mypage-hero" aria-labelledby="profile-name">
       <button type="button" className="mypage-avatar" onClick={onEdit} aria-label="프로필 수정">
-        {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" /> : <span>{initials}</span>}
+        {profile.avatarUrl ? <img src={profile.avatarUrl} alt="" /> : <span>{initial}</span>}
         <i aria-hidden="true" />
         <span className="mypage-avatar-edit" aria-hidden="true">
           <svg viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l10.7-10.7-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></svg>
