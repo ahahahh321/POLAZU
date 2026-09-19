@@ -49,7 +49,8 @@ export default function BrowserProjectRuntime({ project }: { project: Project })
   };
   function send(type: string, payload: Record<string,unknown>={}) {
     if(!frame.current?.contentWindow || !baseUrl || !documentId.current)return;
-    frame.current.contentWindow.postMessage({source:"polazu-editor",token,type,...payload},new URL(baseUrl).origin);
+    const targetOrigin = baseUrl.startsWith("blob:") ? "*" : new URL(baseUrl).origin;
+    frame.current.contentWindow.postMessage({source:"polazu-editor",token,type,...payload}, targetOrigin);
   }
   function sync() { send("sync",stateRef.current); }
 
@@ -75,7 +76,9 @@ export default function BrowserProjectRuntime({ project }: { project: Project })
   },[stage,frameUrl]);
   useEffect(()=>{
     function receive(event: MessageEvent) {
-      if(!baseUrl || event.source!==frame.current?.contentWindow || event.origin!==new URL(baseUrl).origin)return;
+      if(!baseUrl || event.source!==frame.current?.contentWindow)return;
+      const expectedOrigin = baseUrl.startsWith("blob:") ? window.location.origin : new URL(baseUrl).origin;
+      if (event.origin !== expectedOrigin && event.origin !== "null" && event.origin !== window.location.origin) return;
       const data=event.data;
       if(!data || data.source!=="polazu-preview" || data.token!==token)return;
       if(data.type==="ready") {
@@ -99,6 +102,33 @@ export default function BrowserProjectRuntime({ project }: { project: Project })
   function navigate(value: string) {
     if(!baseUrl)return;
     if(!value.startsWith("/") || value.startsWith("//") || /[\\\r\n]/.test(value)){setNotice("프로젝트 내부 경로만 입력하세요. 예: /about");return;}
+    if (baseUrl.startsWith("blob:")) {
+      const candidates = [value, value + ".html", value.endsWith("/") ? value + "index.html" : value];
+      let foundContent: string | undefined;
+      for (const cand of candidates) {
+        if (project.files[cand]) {
+          foundContent = project.files[cand];
+          break;
+        }
+      }
+      if (foundContent) {
+        fetch("/editor-bridge.js", { cache: "no-store" })
+          .then(r => (r.ok ? r.text() : ""))
+          .then(bridge => {
+            const script = `\n<script>\nwindow.__POLAZU_CONFIG__ = { token: ${JSON.stringify(token)}, origin: window.location.origin };\n</script>\n<script>\n${bridge}\n</script>\n`;
+            let injected = foundContent!;
+            if (injected.includes("</body>")) injected = injected.replace("</body>", script + "</body>");
+            else if (injected.includes("</html>")) injected = injected.replace("</html>", script + "</html>");
+            else injected += script;
+            const nextUrl = URL.createObjectURL(new Blob([injected], { type: "text/html;charset=utf-8" }));
+            setFrameUrl(nextUrl);
+            setPath(value);
+            setPathInput(value);
+            setSelected(null);
+          });
+        return;
+      }
+    }
     const url=new URL(value,baseUrl);if(url.origin!==new URL(baseUrl).origin)return;
     failed.current=false;
     setStage("loading");setStatus("페이지 로딩 중");setSelected(null);setFrameUrl(url.href);setPathInput(value);
