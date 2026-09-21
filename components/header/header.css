@@ -1,17 +1,25 @@
+.common-header-bar {
+  width: 100%;
+  background: #000;
+}
+
 .common-header {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: clamp(12px, 1.8vw, 28px);
   height: 87px;
-  padding: 0 32px 0 35px;
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding: 0 clamp(16px, 2.5vw, 35px);
   background: #000;
   color: #ddd;
+  box-sizing: border-box;
 }
 .common-logo {
   flex-shrink: 0;
   width: 162px;
   height: 36px;
-  margin-right: 27px;
+  margin-right: clamp(8px, 1.5vw, 27px);
   border-radius: 3px;
   background: #d9d9d9;
   color: #111;
@@ -19,44 +27,123 @@
   font-size: 24px;
   line-height: 36px;
 }
-.common-navigation { display: flex; align-items: center; gap: 48px; }
-.common-navigation a, .common-navigation button { font-size: 16px; white-space: nowrap; }
-.common-navigation button:disabled { color: #bbb; cursor: default; }
-.common-navigation a:hover { color: #fff; text-decoration: underline; }
-.common-navigation a[aria-current="page"] { color: #fff; text-decoration: underline; text-underline-offset: 6px; }
+.common-navigation {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 2.2vw, 48px);
+  flex-shrink: 1;
+  min-width: 0;
+}
+.editor-nav-menu { position: relative; display: flex; align-items: center; height: 100%; }
+.editor-nav-menu::after { content:""; position:absolute; top:100%; left:50%; width:220px; height:12px; transform:translateX(-50%); }
+.editor-nav-trigger.active { color:#fff; font-weight:700; }
+.editor-nav-trigger span { display:inline-block; margin-left:3px; font-size:14px; line-height:0; transform:translateY(-1px); }
+.editor-nav-dropdown { position: absolute; z-index: 30; top: calc(100% + 10px); left: 50%; min-width: 206px; padding:10px; transform: translateX(-50%) translateY(-4px); opacity: 0; visibility: hidden; pointer-events: none; border: 1px solid #303030; border-radius: 11px; background: #171717; box-shadow: 0 16px 26px #0009; transition: opacity .15s, transform .15s, visibility .15s; }
+.editor-nav-menu:hover .editor-nav-dropdown, .editor-nav-menu:focus-within .editor-nav-dropdown { opacity: 1; visibility: visible; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+.editor-nav-dropdown .editor-nav-option { display:block; padding:12px; border-radius:7px; color:#f4f4f4; text-decoration:none; }
+.editor-nav-option strong,.editor-nav-option small { display:block; }.editor-nav-option strong { font-size:14px; font-weight:700; }.editor-nav-option small { margin-top:5px; color:#929292; font-size:11px; }.editor-nav-dropdown .editor-nav-option:hover { background:#272727; color:#fff; text-decoration:none; }.editor-nav-option:hover small { color:#d3d3d3; }
+.common-navigation a, .common-navigation button {
+  font-size: clamp(13px, 1.1vw, 16px);
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #ddd;
+  text-decoration: none;
+  text-underline-offset: 6px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.common-navigation button:disabled { color: #bbb; cursor: pointer; }
+.common-navigation a:hover,
+.common-navigation button:hover {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+.common-navigation a[aria-current="page"] {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+}
+.common-navigation a[aria-current="page"]:hover {
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
 .common-header-spacer { margin-left: auto; }
 .common-search {
   display: flex;
-  flex-shrink: 0;
+  flex-shrink: 1;
   align-items: center;
-  gap: 28px;
-  width: 228px;
+  gap: 12px;
+  width: clamp(130px, 18vw, 228px);
+  min-width: 110px;
   height: 44px;
   margin-left: auto;
   padding: 8px 14px;
   border-radius: 24px;
   background: #e9e9e9;
   color: #171717;
+  box-sizing: border-box;
 }
-.common-search svg { flex-shrink: 0; width: 24px; height: 24px; }
-.common-search input { width: 100%; min-width: 0; background: transparent; font-size: 18px; }
+.common-search svg { flex-shrink: 0; width: 20px; height: 20px; }
+.common-search input { width: 100%; min-width: 0; background: transparent; font-size: 16px; border: none; }
 .common-search input:focus { outline: none; }
 .common-search:focus-within { outline: 2px solid white; outline-offset: 4px; }
-.common-profile { flex-shrink: 0; }
+.common-search input::-webkit-search-cancel-button,
+.common-search input::-webkit-search-decoration,
+.common-search input::-webkit-search-results-button,
+.common-search input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+.common-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-left: 4px;
+  background: transparent;
+  border: none;
+  color: #171717;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 50%;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.common-search-clear:hover {
+  opacity: 0.6;
+  transform: scale(1.1);
+}
+.common-search-clear svg {
+  width: 14px;
+  height: 14px;
+  stroke: #171717;
+}
+.common-profile {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  line-height: 0;
+}
+.common-profile:hover { outline: 2px solid #ff4d0a; outline-offset: 4px; }
 .common-profile .common-avatar { width: 52px; height: 52px; }
 
 @media (max-width: 1200px) {
-  .common-header { gap: 24px; padding-inline: 24px; }
-  .common-logo { width: 126px; margin-right: 0; }
-  .common-navigation { gap: 28px; }
-  .common-search { width: 200px; gap: 14px; }
+  .common-header { height: 78px; }
+  .common-logo { width: 120px; font-size: 20px; height: 32px; line-height: 32px; }
+  .common-search { height: 40px; }
+  .common-search input { font-size: 14px; }
 }
 @media (max-width: 950px) {
-  .common-header { gap: 18px; padding-inline: 20px; }
-  .common-navigation { gap: 18px; }
-  .common-navigation a, .common-navigation button { font-size: 14px; }
-  .common-logo { width: 105px; font-size: 20px; }
-  .common-search { width: 165px; }
+  .common-header { height: 70px; }
+  .common-logo { width: 96px; font-size: 18px; }
+  .common-navigation a, .common-navigation button { font-size: 13px; }
+  .common-search { height: 36px; padding: 6px 10px; }
   .common-profile .common-avatar { width: 36px; height: 36px; }
 }
 @media (max-width: 760px) {
