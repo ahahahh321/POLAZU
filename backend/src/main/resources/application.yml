@@ -1,10 +1,10 @@
 spring:
   application:
-    name: interface-lab-backend
+    name: polazu-backend
   config:
     import: optional:file:../.env[.properties]
   datasource:
-    url: jdbc:mysql://localhost:${MYSQL_PORT:3307}/${MYSQL_DATABASE:interface_lab}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    url: jdbc:mysql://localhost:${MYSQL_PORT:3307}/${MYSQL_DATABASE:interface_lab}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=utf8
     username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -14,9 +14,29 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: 64MB
+      max-request-size: 66MB
+  mvc:
+    async:
+      request-timeout: 31m
 
 server:
-  # 현재 단계에서는 같은 PC에서만 접근할 수 있게 서버를 loopback 주소에 묶습니다.
-  address: 127.0.0.1
-  port: 8080
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
   max-http-request-header-size: 16KB
+  tomcat:
+    max-swallow-size: 66MB
+
+polazu:
+  auth:
+    secure-cookie: ${POLAZU_SECURE_COOKIE:false}
+  cors:
+    allowed-origins: ${POLAZU_ALLOWED_ORIGINS:http://127.0.0.1:3000,http://localhost:3000}
+  limits:
+    shared-source-bytes: 33554432
+    file-bytes: 4194304
+    file-count: 2500
+    zip-upload-bytes: 67108864
+    zip-expanded-bytes: 134217728

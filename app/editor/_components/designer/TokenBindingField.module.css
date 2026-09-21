@@ -1,0 +1,295 @@
+.root {
+  position: relative;
+  min-width: 0;
+}
+
+.control {
+  width: 100%;
+}
+
+.control > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.color .control > span {
+  min-width: 56px;
+}
+
+.control .value {
+  padding-right: 2px;
+}
+
+.control .swatch[type="color"] {
+  flex: 0 0 23px;
+  width: 23px;
+  height: 23px;
+  padding: 0;
+  border: 1px solid #414651;
+  border-radius: 5px;
+  background: transparent;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.swatch::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.swatch::-webkit-color-swatch {
+  border: 0;
+}
+
+.trigger {
+  align-self: stretch;
+  flex: 0 0 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid #30343e;
+  background: transparent;
+  color: #777b87;
+  cursor: pointer;
+}
+
+.trigger:hover,
+.trigger.active {
+  background: rgba(136, 120, 246, .13);
+  color: #a99dfb;
+}
+
+.trigger:disabled {
+  cursor: default;
+  opacity: .4;
+}
+
+.trigger svg {
+  width: 13px;
+  height: 13px;
+}
+
+.popover {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 5px);
+  left: 0;
+  width: min(272px, calc(100vw - 24px));
+  display: grid;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid #3b3f4b;
+  border-radius: 9px;
+  background: #191c22;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, .42);
+}
+
+:global(.designer-field-grid.four) > .root:nth-child(n + 3) .popover {
+  right: 0;
+  left: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.header > div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.header svg {
+  width: 13px;
+  height: 13px;
+  color: #9c90ef;
+}
+
+.header strong {
+  color: #e5e4eb;
+  font-size: 10px;
+}
+
+.header small {
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: #2b2d36;
+  color: #9195a1;
+  font-size: 8px;
+}
+
+.header > button {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #858995;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.search {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 7px;
+  border: 1px solid #30343e;
+  border-radius: 6px;
+  background: #12151a;
+}
+
+.search:focus-within {
+  border-color: #7065ce;
+}
+
+.search svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  color: #6f7480;
+}
+
+.search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #dbdce2;
+  font-size: 9px;
+}
+
+.list {
+  max-height: 190px;
+  display: grid;
+  gap: 3px;
+  overflow-y: auto;
+}
+
+.token {
+  min-width: 0;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #c7c9d0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.token:hover,
+.token.selected {
+  border-color: #363946;
+  background: #242730;
+}
+
+.token.selected {
+  border-color: #5e56a6;
+}
+
+.tokenSwatch {
+  flex: 0 0 19px;
+  width: 19px;
+  height: 19px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 5px;
+}
+
+.token > span {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 2px;
+}
+
+.token strong,
+.token small,
+.token em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.token strong {
+  color: #e0e1e6;
+  font: 9px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.token small {
+  color: #838793;
+  font: 8px/1.2 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.token em {
+  max-width: 64px;
+  color: #656a75;
+  font-size: 7px;
+  font-style: normal;
+}
+
+.token > svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  color: #9b90f0;
+}
+
+.empty {
+  min-height: 95px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: #858995;
+  text-align: center;
+}
+
+.empty svg {
+  width: 18px;
+  height: 18px;
+}
+
+.empty span {
+  font-size: 9px;
+}
+
+.empty small {
+  color: #626773;
+  font-size: 8px;
+}
+
+.footer {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #2d3039;
+  color: #747986;
+  font-size: 8px;
+}
+
+.footer code {
+  min-width: 0;
+  overflow: hidden;
+  color: #a89df1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 8px;
+}

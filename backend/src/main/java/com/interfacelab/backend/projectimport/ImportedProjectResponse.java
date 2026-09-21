@@ -2,18 +2,15 @@ package com.interfacelab.backend.projectimport;
 
 import java.util.Map;
 
-/**
- * ?띿뒪???뚯뒪? ?덉슜??諛붿씠?덈━ ?먯뀑(Base64)??遺꾨━?댁꽌 諛섑솚?⑸땲??
- * ?쒕쾭?????뚯씪?ㅼ쓣 ?ㅽ뻾?섍굅???붿뒪?ъ뿉 ??ν븯吏 ?딆뒿?덈떎.
- */
+/** 가져온 파일은 아직 실행하지 않으며 서버 작업 공간에 저장할 수 있는 정규화된 형태입니다. */
 public record ImportedProjectResponse(
-		RepositorySource source,
-		String framework,
-		Map<String, String> files,
-		Map<String, String> dependencies,
-		int skippedFileCount,
-		Map<String, String> binaryFiles
+        RepositorySource source,
+        String framework,
+        Map<String, String> files,
+        Map<String, String> dependencies,
+        int skippedFileCount,
+        Map<String, String> binaryFiles,
+        String baseCommit
 ) {
-	public record RepositorySource(String owner, String repository, String ref, String url) {
-	}
+    public record RepositorySource(String owner, String repository, String ref, String url) {}
 }

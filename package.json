@@ -1,11 +1,15 @@
 {
-  "name": "tmp",
-  "version": "0.1.0",
+  "name": "polazu-workspace",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:adapters": "node scripts/editor-adapters.test.cjs",
+    "check:syntax": "node scripts/source-syntax-check.cjs",
+    "smoke:api": "node scripts/workspace-api-smoke.cjs",
+    "test:designer": "node scripts/designer-editor.test.cjs"
   },
   "dependencies": {
     "@webcontainer/api": "^1.6.4",

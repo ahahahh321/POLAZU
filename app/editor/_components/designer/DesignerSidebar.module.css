@@ -1,0 +1,119 @@
+.layerRow.layerRow {
+  grid-template-columns: 17px minmax(0, 1fr) auto;
+  padding-left: calc(var(--layer-depth) * 10px);
+  position: relative;
+}
+
+.layerRow:focus-visible {
+  outline: 1px solid #a99aff;
+  outline-offset: -1px;
+}
+
+.layerDropTarget.layerDropTarget {
+  outline: 2px solid #3fcf78;
+  outline-offset: -2px;
+  background: rgba(63, 207, 120, .12);
+}
+
+.layerDropTarget.layerDropTarget::after {
+  content: "안으로 이동";
+  position: absolute;
+  right: 5px;
+  top: 3px;
+  z-index: 2;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #16864a;
+  color: white;
+  font-size: 8px;
+  pointer-events: none;
+}
+
+.layerRow:focus-within :global(.designer-layer-actions),
+.hiddenLayer :global(.designer-layer-actions),
+.layerRow:global(.locked) :global(.designer-layer-actions) { display: flex; }
+
+.hiddenLayer .layerMain { opacity: .52; }
+
+.disclosure {
+  width: 17px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  color: #9399a7;
+  background: transparent;
+  cursor: pointer;
+}
+
+.disclosure:hover { color: #ece9ff; background: #333341; }
+.disclosure svg { width: 12px; height: 12px; transition: transform .12s ease; }
+.expanded svg { transform: rotate(90deg); }
+.disclosure:disabled { cursor: default; }
+.disclosurePlaceholder { width: 17px; }
+
+.layerMain.layerMain { gap: 5px; }
+.layerMain.layerMain > span { flex: 1; min-width: 16px; }
+.layerMain.layerMain > svg { color: #a19aae; }
+.layerType {
+  font-size: 8px;
+  font-weight: 400;
+  color: #858a96;
+  margin-left: auto;
+  flex-shrink: 0;
+  padding-right: 4px;
+}
+
+.layerRow:hover .layerType,
+.layerRow:focus-within .layerType,
+.layerRow:global(.selected) .layerType { display: none; }
+
+.search:focus-within { border-color: #9183de; box-shadow: 0 0 0 1px #9183de; }
+.search input::-webkit-search-cancel-button { display: none; }
+
+.insertTarget {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #3d354f;
+  border-radius: 8px;
+  background: #211e2c;
+  color: #b8a8ff;
+}
+
+.insertTarget > svg { flex-shrink: 0; }
+.insertTarget > div { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.insertTarget small { font-size: 9px; color: #9890ac; }
+.insertTarget strong { font-size: 11px; color: #ece7ff; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.insertTarget button { display: grid; place-items: center; background: transparent; color: #b8a8ff; border: 0; cursor: pointer; padding: 5px; border-radius: 5px; }
+.insertTarget button:hover { background: #3b3152; }
+.insertHint { color: #989da8; font-size: 10px; line-height: 1.55; margin: 8px 1px 12px; }
+
+.categoryFilters { display: flex; flex-wrap: wrap; gap: 5px; padding-bottom: 14px; }
+.categoryFilters button,
+.recentInserts button {
+  border: 1px solid #30343e;
+  border-radius: 6px;
+  background: #1d2028;
+  color: #abb0ba;
+  padding: 5px 7px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.categoryFilters button:hover,
+.recentInserts button:hover { border-color: #70638c; color: white; }
+.categoryFilters button[aria-pressed="true"] { color: #e6deff; background: #393049; border-color: #766293; }
+.resultCount { color: #6f7582; font-size: 9px; margin-left: 7px; font-weight: 400; }
+.recentInserts { margin: 0 0 15px; }
+.recentInserts > small { color: #858b98; font-size: 9px; }
+.recentInserts > div { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.recentInserts button { display: flex; align-items: center; gap: 4px; }
+.recentInserts button svg { width: 12px; height: 12px; }
+.recentInserts button:disabled { opacity: .45; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure svg { transition: none; }
+}

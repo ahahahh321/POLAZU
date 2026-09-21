@@ -1,313 +1,93 @@
 "use client";
 
-import { FormEvent, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/header/Header";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { ApiError, apiFetch, errorMessage } from "@/lib/api";
+import type { ChangeResult, WorkspaceSnapshot } from "@/lib/types";
 import BrowserProjectRuntime from "./_components/BrowserProjectRuntime";
-import SavedUiEditor from "./_components/SavedUiEditor";
-import type { Project } from "./_lib/types";
-import { demo } from "./_lib/demo";
+import WorkspaceDock from "./_components/WorkspaceDock";
+import type { FileChange, Project } from "./_lib/types";
 import "./page.css";
 
-export default function EditorPage() {
-  const [url, setUrl] = useState("");
-  const [branch, setBranch] = useState("");
-  const [project, setProject] = useState<Project | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [showImport, setShowImport] = useState(true);
-  const [studioMode, setStudioMode] = useState<"project" | "ui">("project");
-  const input = useRef<HTMLInputElement>(null);
+type PendingChange={baseRevision:number;clientMutationId:string;summary:string;kind:"CODE"|"DESIGN"|"EDIT";changes:FileChange[]};
 
-  useEffect(() => {
-    const mode = new URLSearchParams(window.location.search).get("mode");
-    if (mode === "ui") setStudioMode("ui");
-  }, []);
+export default function EditorPage(){
+  const {user,loading}=useAuth();const router=useRouter();
+  const [projectId,setProjectId]=useState("");
+  const [snapshot,setSnapshot]=useState<WorkspaceSnapshot|null>(null);const snapshotRef=useRef<WorkspaceSnapshot|null>(null);
+  const [busy,setBusy]=useState(true);const [error,setError]=useState("");const [location,setLocation]=useState("workspace");
+  const [remoteNotice,setRemoteNotice]=useState<{revision:number;summary:string}|null>(null);const [pending,setPending]=useState<PendingChange[]>([]);
+  const saveQueue=useRef<Promise<unknown>>(Promise.resolve());
+  snapshotRef.current=snapshot;
 
-  async function load(event: FormEvent) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      const response = await fetch(
-        (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8080") +
-          "/api/editor/import/github",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ repositoryUrl: url, ref: branch || null }),
-          signal: AbortSignal.timeout(45000),
-        }
-      );
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || "가져오기 실패");
-      setProject(result);
-      setShowImport(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "가져오기 실패");
-    } finally {
-      setBusy(false);
-    }
-  }
+  useEffect(()=>{const params=new URLSearchParams(window.location.search);setProjectId(params.get("projectId")??"");},[]);
+  useEffect(()=>{if(!loading&&!user)router.replace(`/login?next=${encodeURIComponent(window.location.pathname+window.location.search)}`);},[loading,router,user]);
 
-  async function local(files: FileList | null) {
-    if (!files) return;
-    setError("");
-    setBusy(true);
-    try {
-      const text: Record<string, string> = {};
-      const binary: Record<string, string> = {};
-      let size = 0;
-      let skipped = 0;
-      let count = 0;
-      const projectName =
-        files[0]?.webkitRelativePath.split("/")[0] || "Local project";
+  const loadSnapshot=useCallback(async()=>{
+    if(!projectId)return;setBusy(true);setError("");
+    try{const next=await apiFetch<WorkspaceSnapshot>(`/api/projects/${projectId}/workspace`);setSnapshot(next);setRemoteNotice(null);const stored=localStorage.getItem(`polazu-pending:${projectId}`);setPending(parsePending(stored));}
+    catch(cause){setError(errorMessage(cause));}
+    finally{setBusy(false);}
+  },[projectId]);
+  useEffect(()=>{if(user&&projectId)void loadSnapshot();else if(user&&!projectId)setBusy(false);},[loadSnapshot,projectId,user]);
 
-      for (const file of Array.from(files)) {
-        const path = "/" + file.webkitRelativePath.split("/").slice(1).join("/");
-        const parts = path.split("/").filter(Boolean);
-        if (
-          parts.some(
-            (p) =>
-              p.startsWith(".") ||
-              ["node_modules", "dist", "build", "out", "coverage", "target"].includes(p)
-          ) ||
-          /(?:credential|private-key|service-account|id_rsa|\.pem$|\.key$)/i.test(path)
-        ) {
-          skipped++;
-          continue;
-        }
-        if (
-          !/\.(?:[cm]?[jt]sx?|json|html|css|s[ac]ss|less|vue|svelte|astro|mdx?|svg|txt|ya?ml|png|jpe?g|gif|webp|ico|woff2?|ttf)$/i.test(
-            path
-          )
-        ) {
-          skipped++;
-          continue;
-        }
-        size += file.size;
-        if (size > 20 * 1024 * 1024 || file.size > 4 * 1024 * 1024 || ++count > 1000) {
-          throw new Error("폴더 제한: 총 20MB, 파일당 4MB, 1,000개입니다.");
-        }
-        if (/\.(png|jpe?g|gif|webp|ico|woff2?|ttf)$/i.test(path)) {
-          const bytes = new Uint8Array(await file.arrayBuffer());
-          let raw = "";
-          for (let i = 0; i < bytes.length; i += 8192) {
-            raw += String.fromCharCode(...bytes.subarray(i, i + 8192));
-          }
-          binary[path] = btoa(raw);
-        } else {
-          text[path] = (await file.text()).replace(/^\uFEFF/, "");
-        }
+  const queuePending=useCallback((entry:PendingChange)=>{setPending(current=>{const next=[...current,entry].slice(-50);localStorage.setItem(`polazu-pending:${projectId}`,JSON.stringify(next));return next;});},[projectId]);
+
+  const saveWorkspace=useCallback((changes:FileChange[],summary:string,kind:"CODE"|"DESIGN"|"EDIT")=>{
+    const operation=saveQueue.current.catch(()=>undefined).then(async()=>{
+      const current=snapshotRef.current;if(!current)throw new Error("작업 공간을 먼저 불러와 주세요.");
+      const entry:PendingChange={baseRevision:current.revision,clientMutationId:crypto.randomUUID(),summary,kind,changes:changes.map(change=>({...change,delete:change.delete===true}))};
+      if(!navigator.onLine){queuePending(entry);throw new Error("오프라인 변경을 브라우저 복구 큐에 보관했습니다. 재접속 후 충돌을 확인하고 전송하세요.");}
+      try{
+        const result=await apiFetch<ChangeResult>(`/api/projects/${projectId}/workspace/changes?kind=${kind}`,{method:"POST",body:JSON.stringify(entry)});
+        setSnapshot(previous=>{if(!previous)return previous;const next=applyResult(previous,result,changes);snapshotRef.current=next;return next;});return result.revision;
+      }catch(cause){
+        if(cause instanceof ApiError&&cause.code==="REVISION_CONFLICT"){const revision=Number(cause.details?.currentRevision??-1);setRemoteNotice({revision,summary:"다른 사용자의 저장이 먼저 반영되었습니다."});throw new Error(`revision 충돌: 서버는 r${revision}입니다. 최신 작업 공간을 확인한 뒤 변경을 다시 적용하세요.`);}
+        if(cause instanceof ApiError&&cause.status<500)throw cause;
+        queuePending(entry);const reason=errorMessage(cause);throw new Error(`${reason} 변경은 복구 큐에 보관했습니다.`);
       }
+    });saveQueue.current=operation;return operation;
+  },[projectId,queuePending]);
 
-      setProject({
-        source: {
-          owner: "Local",
-          repository: projectName,
-          ref: "local",
-          url: "",
-        },
-        framework: "AUTO",
-        files: text,
-        binaryFiles: binary,
-        skippedFileCount: skipped,
-      });
-      setShowImport(false);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "폴더 읽기 실패");
-    } finally {
-      setBusy(false);
-      if (input.current) input.current.value = "";
-    }
+  const handleRemoteRevision=useCallback((revision:number,summary:string)=>setRemoteNotice({revision,summary}),[]);
+  const handlePresence=useCallback((presence:WorkspaceSnapshot["presence"])=>setSnapshot(current=>current?{...current,presence}:current),[]);
+
+  async function flushPending(){
+    if(!snapshot||pending.length===0)return;setError("");
+    const operation=saveQueue.current.catch(()=>undefined).then(async()=>{
+      let revision=snapshotRef.current?.revision??snapshot.revision;const rest=[...pending];
+      try{
+        const queuedBase=rest[0]?.baseRevision;
+        if(queuedBase!==revision)throw new Error(`복구 큐 기준 r${queuedBase}와 서버 r${revision}이 달라 자동 적용하지 않았습니다.`);
+        while(rest.length){
+          const entry=rest[0];
+          // Offline edits are one ordered local chain. After the first item is
+          // accepted, rebase only the next queued item onto that new revision.
+          // A concurrent server write still produces a normal conflict.
+          const payload={...entry,baseRevision:revision};
+          const result=await apiFetch<ChangeResult>(`/api/projects/${projectId}/workspace/changes?kind=${entry.kind}`,{method:"POST",body:JSON.stringify(payload)});
+          revision=result.revision;rest.shift();
+          setSnapshot(previous=>{if(!previous)return previous;const next=applyResult(previous,result,entry.changes);snapshotRef.current=next;return next;});
+          if(rest[0])rest[0]={...rest[0],baseRevision:revision};
+        }
+        localStorage.removeItem(`polazu-pending:${projectId}`);setPending([]);await loadSnapshot();
+      }catch(cause){setError(errorMessage(cause));setPending(rest);localStorage.setItem(`polazu-pending:${projectId}`,JSON.stringify(rest));}
+    });
+    saveQueue.current=operation;await operation;
   }
 
-  const handleStartDemo = () => {
-    setProject(demo);
-    setShowImport(false);
-    setError("");
-  };
+  if(loading||busy)return <main className="route-gate"><div className="route-gate-spinner"/><p>서버 작업 공간을 불러오는 중입니다.</p></main>;
+  if(!projectId)return <div className="editor-page-view"><Header activeNav="Editor"/><main className="editor-entry-container"><header className="editor-page-header"><span className="editor-page-eyebrow">POLAZU WEB STUDIO</span><h1 className="editor-page-title">PROJECT REQUIRED</h1><p className="editor-page-subtitle">프로젝트 목록에서 서버 작업 공간을 선택해 주세요.</p></header><section className="editor-import-card"><h2>공유 프로젝트 선택</h2><p className="editor-import-card-desc">GitHub 또는 ZIP 프로젝트는 프로젝트 화면에서 한 번 가져온 뒤 팀원이 같은 프로젝트를 엽니다.</p><Link className="editor-submit-btn" href="/projects">프로젝트 목록 열기</Link></section></main></div>;
+  if(error&&!snapshot)return <div className="editor-page-view"><Header activeNav="Editor"/><main className="editor-entry-container"><div className="editor-alert-error">{error}</div><button className="editor-submit-btn" onClick={()=>void loadSnapshot()}>다시 시도</button> <Link href="/projects">프로젝트 목록</Link></main></div>;
+  if(!snapshot)return null;
 
-  return (
-    <div className="editor-page-view">
-      {/* 1. Common POLAZU Header with Editor as active */}
-      <Header activeNav="Editor" />
-
-      {/* 2. Top Sub-Bar when Project is loaded */}
-      {project && (
-        <div className="editor-subbar">
-          <div className="editor-subbar-info">
-            <span className="editor-subbar-badge">Workspace</span>
-            <span className="editor-subbar-sep">/</span>
-            <strong className="editor-subbar-name">
-              {project.source.repository || "새 프로젝트"}
-            </strong>
-            {project.source.ref && (
-              <small className="editor-subbar-ref">{project.source.ref}</small>
-            )}
-          </div>
-          <div className="editor-subbar-actions">
-            <button
-              type="button"
-              className="editor-subbar-btn"
-              onClick={() => setShowImport(!showImport)}
-            >
-              {showImport ? "✕ 창 닫기" : "＋ 다른 프로젝트 열기"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* 3. Main Body */}
-      {studioMode !== "ui" && (!project || showImport) ? (
-        <main className="editor-entry-container">
-          {/* Header Title Section matching Convert & Upload */}
-          <header className="editor-page-header">
-            <span className="editor-page-eyebrow">POLAZU WEB STUDIO</span>
-            <h1 className="editor-page-title">PROJECT &amp; CODE EDITOR</h1>
-            <p className="editor-page-subtitle">
-              GitHub 저장소나 로컬 프로젝트를 불러와 브라우저 실시간 캔버스에서 화면과 코드를 디자인하세요.
-            </p>
-          </header>
-
-          {/* Import Workspace Panel */}
-          <section className="editor-import-card" aria-label="프로젝트 불러오기">
-            <div className="editor-import-card-header">
-              <div className="editor-import-card-tag">GITHUB IMPORT</div>
-              <h2 className="editor-import-card-title">저장소 불러오기</h2>
-              <p className="editor-import-card-desc">
-                공개 GitHub 저장소 URL을 입력하여 실행 가능한 웹 프로젝트를 즉시 분석하고 로드합니다.
-              </p>
-            </div>
-
-            <form onSubmit={load} className="editor-github-form">
-              <div className="editor-form-field">
-                <label htmlFor="github-url">GitHub 저장소 URL</label>
-                <input
-                  id="github-url"
-                  type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://github.com/owner/repository"
-                  required
-                  className="editor-form-input"
-                />
-              </div>
-
-              <div className="editor-form-field branch-field">
-                <label htmlFor="github-branch">브랜치 (선택)</label>
-                <input
-                  id="github-branch"
-                  type="text"
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  placeholder="main 또는 master"
-                  className="editor-form-input"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="editor-submit-btn"
-                disabled={busy}
-              >
-                {busy ? (
-                  <>
-                    <svg className="editor-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                    </svg>
-                    불러오는 중...
-                  </>
-                ) : (
-                  "프로젝트 불러오기"
-                )}
-              </button>
-            </form>
-
-            {error && <div className="editor-alert-error" role="alert">{error}</div>}
-
-            <div className="editor-quickstart-divider">
-              <span>또는 간편하게 시작하기</span>
-            </div>
-
-            {/* Quickstart Launch Options */}
-            <div className="editor-quickstart-grid">
-              <button
-                type="button"
-                className="editor-quick-btn"
-                disabled={busy}
-                onClick={() => input.current?.click()}
-              >
-                <div className="editor-quick-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                  </svg>
-                </div>
-                <div className="editor-quick-text">
-                  <strong>로컬 폴더 열기</strong>
-                  <span>내 컴퓨터의 프로젝트 폴더를 직접 선택하여 브라우저에서 실행</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className="editor-quick-btn highlight"
-                disabled={busy}
-                onClick={handleStartDemo}
-              >
-                <div className="editor-quick-icon">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                </div>
-                <div className="editor-quick-text">
-                  <strong>데모 프로젝트로 시작</strong>
-                  <span>별도 설정 없이 클릭 한 번으로 준비된 인터랙티브 웹 앱 체험</span>
-                </div>
-              </button>
-            </div>
-
-            <p className="editor-privacy-note">
-              🔒 로컬 폴더는 브라우저 메모리 내에서만 안전하게 읽히며 외부 서버로 비밀키나 토큰이 전송되지 않습니다.
-            </p>
-
-            <input
-              ref={input}
-              type="file"
-              {...({ webkitdirectory: "", directory: "" } as Record<string, string>)}
-              multiple
-              hidden
-              onChange={(e) => void local(e.target.files)}
-            />
-          </section>
-
-          {/* 3 Step Features Guide */}
-          <section className="editor-features-grid" aria-label="에디터 사용 단계">
-            <div className="editor-feature-card">
-              <div className="editor-feature-step">01</div>
-              <h3>프로젝트 및 코드 로드</h3>
-              <p>GitHub 저장소 URL 또는 로컬 폴더를 통해 프론트엔드 프로젝트를 즉시 불러옵니다.</p>
-            </div>
-            <div className="editor-feature-card">
-              <div className="editor-feature-step">02</div>
-              <h3>실시간 시각 디자인 편집</h3>
-              <p>캔버스에서 직접 UI 요소를 클릭하고 폰트, 여백, 컬러, 레이아웃을 직관적으로 수정합니다.</p>
-            </div>
-            <div className="editor-feature-card">
-              <div className="editor-feature-step">03</div>
-              <h3>안전한 변경 내보내기</h3>
-              <p>수정한 디자인 스타일과 Mock API 설정을 원클릭으로 내보내어 프로젝트에 바로 적용합니다.</p>
-            </div>
-          </section>
-        </main>
-      ) : (
-        /* When project is running in studio runtime */
-        <main className="editor-runtime-container">
-          {studioMode === "ui" ? <SavedUiEditor /> : project ? <BrowserProjectRuntime
-            key={JSON.stringify(project.source) + Object.keys(project.files).length}
-            project={project}
-          /> : null}
-        </main>
-      )}
-    </div>
-  );
+  const project:Project={id:projectId,source:{owner:snapshot.project.repositoryOwner??"POLAZU",repository:snapshot.project.name,ref:snapshot.branch,url:snapshot.project.repositoryUrl??"",baseCommit:snapshot.project.baseCommit},framework:snapshot.project.framework,files:snapshot.files,binaryFiles:snapshot.binaryFiles,skippedFileCount:snapshot.project.skippedFileCount,revision:snapshot.revision,publishedRevision:snapshot.project.publishedRevision,role:snapshot.project.role,presence:snapshot.presence};
+  return <div className="editor-page-view editor-page-focus"><WorkspaceDock projectId={projectId} snapshot={snapshot} location={location} onReload={loadSnapshot} onRemoteRevision={handleRemoteRevision} onPresence={handlePresence}/>{remoteNotice&&<div className="editor-sync-banner editor-focus-banner"><span>새 서버 revision r{remoteNotice.revision}: {remoteNotice.summary}</span><button onClick={()=>void loadSnapshot()}>최신 작업 공간 열기</button></div>}{pending.length>0&&<details className="editor-recovery-notice"><summary>보관된 변경 {pending.length}건</summary><div><p>이전에 전송하지 못한 작업이 이 브라우저에 남아 있습니다. 현재 작업과 별도로 보관 중입니다.</p><button onClick={()=>void flushPending()}>저장 상태 확인 후 복구</button><button onClick={()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(pending,null,2)],{type:"application/json"}));const link=document.createElement("a");link.href=url;link.download="polazu-recovery-backup.json";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}>백업 다운로드</button></div></details>}{error&&<div className="editor-alert-error editor-runtime-error">{error}<button onClick={()=>setError("")}>×</button></div>}<main className="editor-runtime-container"><BrowserProjectRuntime project={project} saveWorkspace={saveWorkspace} readOnly={snapshot.project.role==="VIEWER"} onLocationChange={setLocation}/></main></div>;
 }
+
+function parsePending(raw:string|null):PendingChange[]{if(!raw)return[];try{const value=JSON.parse(raw);return Array.isArray(value)?value.slice(-50):[];}catch{return[];}}
+
+function applyResult(snapshot:WorkspaceSnapshot,result:ChangeResult,changes:FileChange[]):WorkspaceSnapshot{const files={...snapshot.files};const binaryFiles={...snapshot.binaryFiles};for(const change of changes){if(change.delete){delete files[change.path];delete binaryFiles[change.path];}else if(typeof change.content==="string"){files[change.path]=change.content;delete binaryFiles[change.path];}else if(change.binaryBase64){binaryFiles[change.path]=change.binaryBase64;delete files[change.path];}}return{...snapshot,revision:result.revision,files,binaryFiles,project:{...snapshot.project,currentRevision:result.revision}};}

@@ -1,16 +1,8 @@
 "use client";
 
-import Header from "@/components/header/Header";
-import SavedUiEditor from "../_components/SavedUiEditor";
-import "../page.css";
+import { useEffect } from "react";
 
 export default function UiEditorPage() {
-  return (
-    <div className="editor-page-view">
-      <Header activeNav="Editor" />
-      <main className="editor-runtime-container">
-        <SavedUiEditor />
-      </main>
-    </div>
-  );
+  useEffect(()=>{window.location.replace(`/editor/${window.location.search}`);},[]);
+  return <main className="route-gate"><p>기존 프로젝트 편집기로 이동하고 있습니다.</p></main>;
 }

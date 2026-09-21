@@ -37,9 +37,26 @@ export function prepareNextUI(project: Project, root: string): Project {
   files[root+"/index.html"]='<!doctype html><html><head><meta charset="utf-8"></head><body><div id="polazu-root"></div><script type="module" src="/.polazu-ui/main.jsx"></script></body></html>';
   files[root+"/.polazu-ui/next.jsx"]=NEXT_SHIM;
   files[root+"/.polazu-ui/main.jsx"]=UI_ENTRY.replace("/*ROUTES*/",entries.map(e=>`{path:${JSON.stringify(e.route)},page:()=>import(${JSON.stringify(e.page)}),layouts:[${e.layouts.map(l=>`()=>import(${JSON.stringify(l)})`).join(",")}]}`).join(","));
-  files[root+"/.polazu-ui/vite.config.mjs"]= `import {defineConfig} from 'vite';import react from '@vitejs/plugin-react';import path from 'node:path';
-const root=process.cwd();
-export default defineConfig({root,plugins:[react({babel:{plugins:[function(){return {visitor:{JSXIdentifier(p){if(['html','body','head'].includes(p.node.name)&&['JSXOpeningElement','JSXClosingElement'].includes(p.parent.type))p.node.name='div'}}}}]}})],resolve:{alias:[{find:/^next(?:\\/.*)?$/,replacement:path.join(root,'.polazu-ui/next.jsx')},{find:'@',replacement:path.join(root,${JSON.stringify(files[root+"/src/app/layout.tsx"]?"src":".")})}]},server:{host:'0.0.0.0',port:4173,strictPort:true}});`;
+  files[root+"/.polazu-ui/vite.config.mjs"]= `import {defineConfig} from 'vite';import react from '@vitejs/plugin-react';import nodePath from 'node:path';
+const runtimeRoot=process.cwd();
+const sourcePrefix=${JSON.stringify(root)};
+function polazuSourcePlugin({types:t}){
+ return {visitor:{
+  JSXOpeningElement(p,state){
+   const name=p.node.name;
+   if(name.type!=='JSXIdentifier'||!/^[a-z]/.test(name.name))return;
+   if(p.node.attributes.some(a=>a.type==='JSXAttribute'&&a.name?.name==='data-polazu-source'))return;
+   const filename=state.file?.opts?.filename||'';
+   if(!filename||filename.includes('/.polazu-ui/')||filename.includes('/node_modules/'))return;
+   const loc=p.node.loc?.start;if(!loc)return;
+   const relative=nodePath.relative(runtimeRoot,filename).split(nodePath.sep).join('/');
+   const projectPath='/'+[sourcePrefix,relative].join('/').split('/').filter(Boolean).join('/');
+   p.node.attributes.push(t.jsxAttribute(t.jsxIdentifier('data-polazu-source'),t.stringLiteral(projectPath+':'+loc.line+':'+loc.column)));
+  },
+  JSXIdentifier(p){if(['html','body','head'].includes(p.node.name)&&['JSXOpeningElement','JSXClosingElement'].includes(p.parent.type))p.node.name='div'}
+ }};
+}
+export default defineConfig({root:runtimeRoot,plugins:[react({babel:{plugins:[polazuSourcePlugin]}})],resolve:{alias:[{find:/^next(?:\\/.*)?$/,replacement:nodePath.join(runtimeRoot,'.polazu-ui/next.jsx')},{find:'@',replacement:nodePath.join(runtimeRoot,${JSON.stringify(files[root+"/src/app/layout.tsx"]?"src":".")})}]},server:{host:'0.0.0.0',port:4173,strictPort:true}});`;
   return {...project,files};
 }
 const NEXT_SHIM=String.raw`

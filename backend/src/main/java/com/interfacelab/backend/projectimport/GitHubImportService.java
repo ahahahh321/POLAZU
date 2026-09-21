@@ -10,236 +10,227 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Pattern;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-/** GitHub ?⑤벀而????關?쇘몴?獄쏆룇釉??됰슢??怨? 沃섎챶?곮퉪?용┛???怨쀬뵠?怨뺤쨮 癰궰??묐???덈뼄. */
 @Service
 public class GitHubImportService {
-	private static final int MAX_METADATA_BYTES = 256 * 1024;
-	private static final int MAX_ARCHIVE_BYTES = 10 * 1024 * 1024;
-	private static final int MAX_DEPENDENCIES = 150;
-	private static final Pattern SAFE_REF = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,119}");
-	private static final Pattern PACKAGE_NAME = Pattern.compile("(?:@[a-z0-9._-]+/)?[a-z0-9._-]+", Pattern.CASE_INSENSITIVE);
+    private static final int MAX_METADATA_BYTES = 512 * 1024;
+    private static final int MAX_ARCHIVE_BYTES = 64 * 1024 * 1024;
+    private static final int MAX_DEPENDENCIES = 300;
+    private static final Pattern SAFE_REF = Pattern.compile("[A-Za-z0-9][A-Za-z0-9._/-]{0,119}");
+    private static final Pattern PACKAGE_NAME = Pattern.compile("(?:@[a-z0-9._-]+/)?[a-z0-9._-]+", Pattern.CASE_INSENSITIVE);
 
-	private final ObjectMapper objectMapper;
-	private final RepositoryArchiveReader archiveReader;
-	private final HttpClient httpClient;
+    private final ObjectMapper objectMapper;
+    private final RepositoryArchiveReader archiveReader;
+    private final HttpClient httpClient;
 
-	public GitHubImportService(ObjectMapper objectMapper, RepositoryArchiveReader archiveReader) {
-		this.objectMapper = objectMapper;
-		this.archiveReader = archiveReader;
-		this.httpClient = HttpClient.newBuilder()
-				.connectTimeout(Duration.ofSeconds(5))
-				.followRedirects(HttpClient.Redirect.NORMAL)
-				.build();
-	}
+    public GitHubImportService(ObjectMapper objectMapper, RepositoryArchiveReader archiveReader) {
+        this.objectMapper = objectMapper;
+        this.archiveReader = archiveReader;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(8))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build();
+    }
 
-	public ImportedProjectResponse importPublicRepository(String repositoryUrl, String requestedRef) {
-		GitHubRepositoryAddress address = GitHubRepositoryAddress.parse(repositoryUrl);
-		String ref = requestedRef == null || requestedRef.isBlank()
-				? fetchDefaultBranch(address)
-				: validateRef(requestedRef.trim());
+    public ImportedProjectResponse importPublicRepository(String repositoryUrl, String requestedRef) {
+        return importRepository(repositoryUrl, requestedRef, null);
+    }
 
-		byte[] archive = downloadArchive(address, ref);
-		RepositoryArchiveReader.ArchiveContent content = archiveReader.read(archive);
-		String manifestPath = content.files().keySet().stream().filter(p -> p.endsWith("/package.json"))
-				.sorted(java.util.Comparator.comparingInt(String::length).thenComparing(String::compareTo)).findFirst().orElse(null);
-		ProjectManifest manifest = manifestPath == null ? new ProjectManifest("HTML", Map.of()) : readManifest(content.files().get(manifestPath));
+    public ImportedProjectResponse importRepository(String repositoryUrl, String requestedRef, String accessToken) {
+        GitHubRepositoryAddress address = GitHubRepositoryAddress.parse(repositoryUrl);
+        RepositoryMetadata metadata = fetchMetadata(address, accessToken);
+        String ref = requestedRef == null || requestedRef.isBlank()
+                ? validateRef(metadata.defaultBranch())
+                : validateRef(requestedRef.trim());
+        String baseCommit = fetchHeadCommit(address, ref, accessToken);
+        byte[] archive = downloadArchive(address, ref, accessToken);
+        RepositoryArchiveReader.ArchiveContent content = archiveReader.read(archive);
+        ProjectManifest manifest = detectManifest(content.files());
+        return new ImportedProjectResponse(
+                new ImportedProjectResponse.RepositorySource(address.owner(), address.repository(), ref, address.webUrl()),
+                manifest.framework(),
+                content.files(),
+                manifest.dependencies(),
+                content.skippedFileCount(),
+                content.binaryFiles(),
+                baseCommit
+        );
+    }
 
-		return new ImportedProjectResponse(
-				new ImportedProjectResponse.RepositorySource(
-						address.owner(), address.repository(), ref, address.webUrl()
-				),
-				manifest.framework(),
-				content.files(),
-				manifest.dependencies(),
-				content.skippedFileCount(),
-				content.binaryFiles()
-		);
-	}
+    private RepositoryMetadata fetchMetadata(GitHubRepositoryAddress address, String accessToken) {
+        JsonNode node = getJson(
+                URI.create("https://api.github.com/repos/" + address.owner() + "/" + address.repository()),
+                accessToken,
+                "REPOSITORY_NOT_FOUND",
+                "저장소를 찾을 수 없거나 접근 권한이 없습니다. 비공개 저장소는 읽기 권한 토큰이 필요합니다."
+        );
+        return new RepositoryMetadata(node.path("default_branch").asText("main"), node.path("private").asBoolean(false));
+    }
 
-	private String fetchDefaultBranch(GitHubRepositoryAddress address) {
-		URI uri = URI.create("https://api.github.com/repos/" + address.owner() + "/" + address.repository());
-		HttpResponse<InputStream> response = send(uri, "application/vnd.github+json");
-		if (response.statusCode() == 404) {
-			closeQuietly(response.body());
-			throw new EditorImportException(
-					"REPOSITORY_NOT_FOUND",
-					"?⑤벀而????關?쇘몴?筌≪뼚??????곷뮸??덈뼄. 雅뚯눘??? ?⑤벀而???????類ㅼ뵥??雅뚯눘苑??",
-					HttpStatus.NOT_FOUND
-			);
-		}
-		if (response.statusCode() != 200) {
-			closeQuietly(response.body());
-			throw githubUnavailable(response.statusCode());
-		}
+    private String fetchHeadCommit(GitHubRepositoryAddress address, String ref, String accessToken) {
+        JsonNode node = getJson(
+                URI.create("https://api.github.com/repos/" + address.owner() + "/" + address.repository() + "/git/ref/heads/" + encodePath(ref)),
+                accessToken,
+                "REF_NOT_FOUND",
+                "요청한 브랜치를 찾을 수 없습니다."
+        );
+        String sha = node.path("object").path("sha").asText();
+        if (!sha.matches("[a-fA-F0-9]{40,64}")) throw githubUnavailable(502);
+        return sha;
+    }
 
-		try (InputStream body = response.body()) {
-			byte[] json = readLimited(body, MAX_METADATA_BYTES, "GitHub ?臾먮뼗????댭???덈빍??");
-			JsonNode node = objectMapper.readTree(json);
-			return validateRef(node.path("default_branch").asText());
-		} catch (IOException | JacksonException exception) {
-			throw githubUnavailable(502);
-		}
-	}
+    private byte[] downloadArchive(GitHubRepositoryAddress address, String ref, String accessToken) {
+        URI uri = URI.create("https://api.github.com/repos/" + address.owner() + "/" + address.repository() + "/zipball/" + encodePath(ref));
+        HttpResponse<InputStream> response = send(uri, "application/vnd.github+json", accessToken);
+        String finalHost = response.uri().getHost();
+        if (finalHost == null || !(finalHost.equals("api.github.com") || finalHost.equals("codeload.github.com") || finalHost.endsWith(".githubusercontent.com"))) {
+            closeQuietly(response.body());
+            throw githubUnavailable(502);
+        }
+        if (response.statusCode() == 404) {
+            closeQuietly(response.body());
+            throw new EditorImportException("REF_NOT_FOUND", "요청한 저장소 또는 브랜치를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+        }
+        if (response.statusCode() != 200) {
+            closeQuietly(response.body());
+            throw githubUnavailable(response.statusCode());
+        }
+        long length = response.headers().firstValueAsLong("Content-Length").orElse(-1);
+        if (length > MAX_ARCHIVE_BYTES) {
+            closeQuietly(response.body());
+            throw new EditorImportException("REPOSITORY_LIMIT_EXCEEDED", "GitHub ZIP이 64MiB를 초과했습니다.", HttpStatus.PAYLOAD_TOO_LARGE);
+        }
+        try (InputStream body = response.body()) {
+            return readLimited(body, MAX_ARCHIVE_BYTES, "GitHub ZIP이 64MiB를 초과했습니다.");
+        } catch (IOException exception) {
+            throw githubUnavailable(502);
+        }
+    }
 
-	private byte[] downloadArchive(GitHubRepositoryAddress address, String ref) {
-		String encodedRef = encodePath(ref);
-		URI uri = URI.create("https://api.github.com/repos/" + address.owner() + "/"
-				+ address.repository() + "/zipball/" + encodedRef);
-		HttpResponse<InputStream> response = send(uri, "application/vnd.github+json");
-		String finalHost = response.uri().getHost();
-		if (finalHost == null || !(finalHost.equals("api.github.com") || finalHost.equals("codeload.github.com"))) {
-			closeQuietly(response.body());
-			throw new EditorImportException(
-					"UNSAFE_GITHUB_REDIRECT", "GitHub ??쇱뒲嚥≪뮆諭?雅뚯눘?쇘몴??類ㅼ뵥??????곷뮸??덈뼄.", HttpStatus.BAD_GATEWAY
-			);
-		}
-		if (response.statusCode() == 404) {
-			closeQuietly(response.body());
-			throw new EditorImportException(
-					"REF_NOT_FOUND", "?遺욧퍕???됰슢?뽫㎉??癒?뮉 ??볥젃??筌≪뼚??????곷뮸??덈뼄.", HttpStatus.NOT_FOUND
-			);
-		}
-		if (response.statusCode() != 200) {
-			closeQuietly(response.body());
-			throw githubUnavailable(response.statusCode());
-		}
+    private JsonNode getJson(URI uri, String accessToken, String notFoundCode, String notFoundMessage) {
+        HttpResponse<InputStream> response = send(uri, "application/vnd.github+json", accessToken);
+        if (response.statusCode() == 404) {
+            closeQuietly(response.body());
+            throw new EditorImportException(notFoundCode, notFoundMessage, HttpStatus.NOT_FOUND);
+        }
+        if (response.statusCode() != 200) {
+            closeQuietly(response.body());
+            throw githubUnavailable(response.statusCode());
+        }
+        try (InputStream body = response.body()) {
+            return objectMapper.readTree(readLimited(body, MAX_METADATA_BYTES, "GitHub 응답이 너무 큽니다."));
+        } catch (IOException exception) {
+            throw githubUnavailable(502);
+        }
+    }
 
-		long contentLength = response.headers().firstValueAsLong("Content-Length").orElse(-1);
-		if (contentLength > MAX_ARCHIVE_BYTES) {
-			closeQuietly(response.body());
-			throw new EditorImportException(
-					"REPOSITORY_LIMIT_EXCEEDED", "???關???類ㅽ뀧 ???뵬??10MB???λ뜃???됰뮸??덈뼄.", HttpStatus.PAYLOAD_TOO_LARGE
-			);
-		}
-		try (InputStream body = response.body()) {
-			return readLimited(body, MAX_ARCHIVE_BYTES, "???關???類ㅽ뀧 ???뵬??10MB???λ뜃???됰뮸??덈뼄.");
-		} catch (IOException exception) {
-			throw githubUnavailable(502);
-		}
-	}
+    private HttpResponse<InputStream> send(URI uri, String accept, String accessToken) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(30))
+                .header("Accept", accept)
+                .header("User-Agent", "polazu-workspace")
+                .header("X-GitHub-Api-Version", "2022-11-28")
+                .GET();
+        if (accessToken != null && !accessToken.isBlank()) builder.header("Authorization", "Bearer " + accessToken.trim());
+        try {
+            return httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
+        } catch (IOException exception) {
+            throw githubUnavailable(502);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw githubUnavailable(503);
+        }
+    }
 
-	private HttpResponse<InputStream> send(URI uri, String accept) {
-		HttpRequest request = HttpRequest.newBuilder(uri)
-				.timeout(Duration.ofSeconds(15))
-				.header("Accept", accept)
-				.header("User-Agent", "polazu-local-editor")
-				.header("X-GitHub-Api-Version", "2022-11-28")
-				.GET()
-				.build();
-		try {
-			return httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-		} catch (IOException exception) {
-			throw githubUnavailable(502);
-		} catch (InterruptedException exception) {
-			Thread.currentThread().interrupt();
-			throw githubUnavailable(503);
-		}
-	}
+    private ProjectManifest detectManifest(Map<String, String> files) {
+        String manifestPath = files.keySet().stream()
+                .filter(path -> path.endsWith("/package.json"))
+                .sorted(java.util.Comparator.comparingInt(String::length).thenComparing(String::compareTo))
+                .findFirst().orElse(null);
+        if (manifestPath == null) return new ProjectManifest("HTML", Map.of());
+        return readManifest(files.get(manifestPath));
+    }
 
-	private ProjectManifest readManifest(String packageJson) {
-		try {
-			JsonNode root = objectMapper.readTree(packageJson);
-			Map<String, String> dependencies = new LinkedHashMap<>();
-			copyDependencies(root.path("dependencies"), dependencies);
-			copyDependencies(root.path("devDependencies"), dependencies);
+    private ProjectManifest readManifest(String packageJson) {
+        try {
+            JsonNode root = objectMapper.readTree(packageJson);
+            Map<String, String> dependencies = new LinkedHashMap<>();
+            copyDependencies(root.path("dependencies"), dependencies);
+            copyDependencies(root.path("devDependencies"), dependencies);
+            if (dependencies.containsKey("vue") || dependencies.containsKey("svelte")
+                    || dependencies.containsKey("@angular/core") || dependencies.containsKey("astro")) {
+                throw new EditorImportException(
+                        "UNSUPPORTED_FRAMEWORK",
+                        "현재는 React, Next.js, JavaScript/TypeScript, HTML/CSS, Tailwind CSS 프로젝트만 지원합니다.",
+                        HttpStatus.UNPROCESSABLE_ENTITY
+                );
+            }
+            String framework = dependencies.containsKey("next") ? "NEXTJS"
+                    : dependencies.containsKey("react") ? "REACT"
+                    : dependencies.containsKey("vite") ? "VITE"
+                    : "JAVASCRIPT";
+            return new ProjectManifest(framework, Map.copyOf(dependencies));
+        } catch (JacksonException exception) {
+            throw new EditorImportException("INVALID_PACKAGE_JSON", "package.json의 JSON 형식이 올바르지 않습니다.", HttpStatus.UNPROCESSABLE_ENTITY);
+        }
+    }
 
-			String framework;
-			if (dependencies.containsKey("next")) {
-				framework = "NEXTJS";
-			} else if (dependencies.containsKey("vite")) {
-				framework = "VITE";
-			} else {
-				framework = "NODE";
-			}
-			return new ProjectManifest(framework, Map.copyOf(dependencies));
-		} catch (JacksonException exception) {
-			throw new EditorImportException(
-					"INVALID_PACKAGE_JSON", "package.json????뚯뱽 ????곷뮸??덈뼄.", HttpStatus.UNPROCESSABLE_ENTITY
-			);
-		}
-	}
+    private void copyDependencies(JsonNode node, Map<String, String> target) {
+        if (!node.isObject()) return;
+        node.forEachEntry((name, valueNode) -> {
+            if (target.size() >= MAX_DEPENDENCIES) {
+                throw new EditorImportException("TOO_MANY_DEPENDENCIES", "의존성 항목이 300개를 초과했습니다.", HttpStatus.UNPROCESSABLE_ENTITY);
+            }
+            String version = valueNode.asText();
+            if (PACKAGE_NAME.matcher(name).matches() && version.length() <= 100) target.put(name, version);
+        });
+    }
 
-	private void copyDependencies(JsonNode node, Map<String, String> target) {
-		if (!node.isObject()) {
-			return;
-		}
-		node.forEachEntry((name, valueNode) -> {
-			if (target.size() >= MAX_DEPENDENCIES) {
-				throw new EditorImportException(
-						"TOO_MANY_DEPENDENCIES", "??뤵?源놁뵠 ??댭?筌띾‘? ?袁⑥쨮??븍뱜???袁⑹춦 筌왖?癒곕릭筌왖 ??녿뮸??덈뼄.",
-						HttpStatus.UNPROCESSABLE_ENTITY
-				);
-			}
-			String version = valueNode.asText();
-			if (PACKAGE_NAME.matcher(name).matches() && version.length() <= 100) {
-				target.put(name, version);
-			}
-		});
-	}
+    public static String validateRef(String ref) {
+        if (ref == null || !SAFE_REF.matcher(ref).matches() || ref.contains("..") || ref.contains("//")
+                || ref.endsWith("/") || ref.endsWith(".lock")) {
+            throw new EditorImportException("INVALID_REF", "브랜치 이름이 올바르지 않습니다.", HttpStatus.BAD_REQUEST);
+        }
+        return ref;
+    }
 
-	private static String validateRef(String ref) {
-		if (!SAFE_REF.matcher(ref).matches() || ref.contains("..") || ref.contains("//")
-				|| ref.endsWith("/") || ref.endsWith(".lock")) {
-			throw new EditorImportException(
-					"INVALID_REF", "?됰슢?뽫㎉??癒?뮉 ??볥젃 ??已??類ㅻ뻼????而?몴?? ??녿뮸??덈뼄.", HttpStatus.BAD_REQUEST
-			);
-		}
-		return ref;
-	}
+    public static String encodePath(String value) {
+        String[] segments = value.split("/");
+        StringBuilder encoded = new StringBuilder();
+        for (String segment : segments) {
+            if (!encoded.isEmpty()) encoded.append('/');
+            encoded.append(URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"));
+        }
+        return encoded.toString();
+    }
 
-	private static String encodePath(String value) {
-		String[] segments = value.split("/");
-		StringBuilder encoded = new StringBuilder();
-		for (String segment : segments) {
-			if (!encoded.isEmpty()) {
-				encoded.append('/');
-			}
-			encoded.append(URLEncoder.encode(segment, StandardCharsets.UTF_8).replace("+", "%20"));
-		}
-		return encoded.toString();
-	}
+    private static byte[] readLimited(InputStream input, int maxBytes, String message) throws IOException {
+        byte[] content = input.readNBytes(maxBytes + 1);
+        if (content.length > maxBytes) throw new EditorImportException("REPOSITORY_LIMIT_EXCEEDED", message, HttpStatus.PAYLOAD_TOO_LARGE);
+        return content;
+    }
 
-	private static byte[] readLimited(InputStream input, int maxBytes, String message) throws IOException {
-		byte[] content = input.readNBytes(maxBytes + 1);
-		if (content.length > maxBytes) {
-			throw new EditorImportException("REPOSITORY_LIMIT_EXCEEDED", message, HttpStatus.PAYLOAD_TOO_LARGE);
-		}
-		return content;
-	}
+    private static void closeQuietly(InputStream input) {
+        try { input.close(); } catch (IOException ignored) { }
+    }
 
-	private static void closeQuietly(InputStream input) {
-		try {
-			input.close();
-		} catch (IOException ignored) {
-			// ??? ??쎈솭??HTTP ?臾먮뼗???類ｂ봺??롫뮉 野껋럥以??癰귢쑬猷???살첒嚥??紐꾪뀱??? ??녿뮸??덈뼄.
-		}
-	}
+    private static EditorImportException githubUnavailable(int statusCode) {
+        String message = statusCode == 401 || statusCode == 403
+                ? "GitHub 인증 또는 저장소 권한을 확인해 주세요. 토큰은 서버에 저장되지 않습니다."
+                : statusCode == 429
+                ? "GitHub 요청 한도에 도달했습니다. 잠시 후 다시 시도해 주세요."
+                : "GitHub와 통신하지 못했습니다.";
+        HttpStatus status = statusCode == 401 || statusCode == 403 ? HttpStatus.FORBIDDEN : HttpStatus.BAD_GATEWAY;
+        return new EditorImportException("GITHUB_UNAVAILABLE", message, status);
+    }
 
-	private static EditorImportException githubUnavailable(int statusCode) {
-		String message = statusCode == 403 || statusCode == 429
-				? "GitHub ?遺욧퍕 ??뺣즲???袁⑤뼎??됰뮸??덈뼄. ?醫롫뻻 ????쇰뻻 ??뺣즲??雅뚯눘苑??"
-				: "GitHub?癒?퐣 ???關?쇘몴?揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??";
-		return new EditorImportException("GITHUB_UNAVAILABLE", message, HttpStatus.BAD_GATEWAY);
-	}
-
-	private static EditorImportException unsupportedProject() {
-		return new EditorImportException(
-				"UNSUPPORTED_PROJECT",
-				"?袁⑹삺??package.json??React揶쎛 ??釉???袁⑥쨮??븍뱜筌?筌왖?癒곕???덈뼄.",
-				HttpStatus.UNPROCESSABLE_ENTITY
-		);
-	}
-
-	private record ProjectManifest(String framework, Map<String, String> dependencies) {
-	}
+    private record ProjectManifest(String framework, Map<String, String> dependencies) {}
+    private record RepositoryMetadata(String defaultBranch, boolean privateRepository) {}
 }

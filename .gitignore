@@ -10,3 +10,15 @@ tmp-aws.zip
 *.zip
 .idea/
 .vscode/
+
+.render/
+.polazu-runtime/
+.gradle-home/
+.gradle-user-home/
+.pnpm-store/
+.local-data/
+.run/
+.incoming-*/
+.codex-*-backup-*/
+backend/.gradle/
+backend/build/
