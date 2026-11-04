@@ -1,0 +1,39 @@
+.polazu-button {
+  --button-bg: #ff4800;
+  --button-fg: #180900;
+  --button-hover: #ff703b;
+  --button-active: #e84100;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--button-bg);
+  color: var(--button-fg);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 750;
+  cursor: pointer;
+}
+.polazu-button[data-variant="secondary"] {
+  --button-bg: #27252e;
+  --button-fg: #fff;
+  --button-hover: #403c49;
+  --button-active: #302d38;
+  border-color: #595461;
+}
+.polazu-button[data-variant="neutral"] {
+  --button-bg: #e9e7ed;
+  --button-fg: #1c1921;
+  --button-hover: #fff;
+  --button-active: #ccc8d2;
+}
+.polazu-button[data-size="sm"] { min-height: 35px; padding-inline: 12px; font-size: 13px; }
+.polazu-button[data-size="lg"] { min-height: 55px; padding-inline: 20px; font-size: 16px; }
+.polazu-button:not(:disabled):hover { background: var(--button-hover); }
+.polazu-button:not(:disabled):active { background: var(--button-active); }
+.polazu-button:focus-visible { outline: 2px solid #d4ff3f; outline-offset: 3px; }
+.polazu-button:disabled { opacity: .45; cursor: not-allowed; }

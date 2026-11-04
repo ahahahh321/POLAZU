@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import ProfileMenu from "./ProfileMenu";
+import BrandLogo from "./BrandLogo";
 import { useAuth } from "../auth/AuthProvider";
 import "./header.css";
 
@@ -9,7 +10,7 @@ import "./header.css";
 type HeaderProps = {
   query?: string;
   onSearch?: (value: string) => void;
-  activeNav?: "Explore" | "Convert" | "Editor" | "Upload" | "Pricing";
+  activeNav?: "Explore" | "Convert" | "Editor" | "Upload";
 };
 
 export default function Header({ query = "", onSearch, activeNav }: HeaderProps) {
@@ -18,7 +19,7 @@ export default function Header({ query = "", onSearch, activeNav }: HeaderProps)
   return (
     <header className="common-header-bar">
       <div className="common-header">
-        <Link href="/" className="common-logo" aria-label="POLAZU 홈">LOGO</Link>
+        <BrandLogo className="common-logo" />
         <nav className="common-navigation" aria-label="주요 메뉴">
           <Link href="/" aria-current={activeNav === "Explore" ? "page" : undefined}>Explore</Link>
           <Link href="/convert/" aria-current={activeNav === "Convert" ? "page" : undefined}>Convert</Link>
@@ -34,7 +35,6 @@ export default function Header({ query = "", onSearch, activeNav }: HeaderProps)
             </div>
           </div>
           <Link href="/upload/" aria-current={activeNav === "Upload" ? "page" : undefined}>Upload</Link>
-          <Link href="/pricing/" aria-current={activeNav === "Pricing" ? "page" : undefined}>Pricing</Link>
         </nav>
         {onSearch ? (
           <label className="common-search">

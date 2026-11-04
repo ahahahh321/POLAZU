@@ -7,7 +7,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { useTheme } from "../theme/ThemeProvider";
 import "./profile-menu.css";
 
-export default function ProfileMenu() {
+export default function ProfileMenu({ onGuestAuth }: { onGuestAuth?: (mode: "login" | "signup") => void } = {}) {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
@@ -124,7 +124,7 @@ export default function ProfileMenu() {
                 </Link>
 
                 <Link
-                  href="/mypage?tab=components"
+                  href="/mypage/#components"
                   className="profile-popup-item"
                   onClick={() => setIsOpen(false)}
                 >
@@ -138,31 +138,18 @@ export default function ProfileMenu() {
                 </Link>
 
                 <Link
-                  href="/mypage?tab=downloads"
-                  className="profile-popup-item"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  <span>Downloads</span>
-                </Link>
-
-                <Link
-                  href="/mypage?tab=projects"
+                  href="/mypage/#projects"
                   className="profile-popup-item"
                   onClick={() => setIsOpen(false)}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                   </svg>
-                  <span>My Projects</span>
+                  <span>Project Tools</span>
                 </Link>
 
                 <Link
-                  href="/mypage?dialog=account"
+                  href="/mypage/#account"
                   className="profile-popup-item"
                   onClick={() => setIsOpen(false)}
                 >
@@ -170,7 +157,7 @@ export default function ProfileMenu() {
                     <circle cx="12" cy="12" r="3" />
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
                   </svg>
-                  <span>Settings</span>
+                  <span>Account</span>
                 </Link>
               </div>
 
@@ -229,14 +216,20 @@ export default function ProfileMenu() {
                 <Link
                   href="/login"
                   className="profile-guest-btn-primary"
-                  onClick={() => setIsOpen(false)}
+                  onClick={(event) => {
+                    setIsOpen(false);
+                    if (onGuestAuth) { event.preventDefault(); onGuestAuth("login"); }
+                  }}
                 >
                   로그인
                 </Link>
                 <Link
                   href="/signup"
                   className="profile-guest-btn-secondary"
-                  onClick={() => setIsOpen(false)}
+                  onClick={(event) => {
+                    setIsOpen(false);
+                    if (onGuestAuth) { event.preventDefault(); onGuestAuth("signup"); }
+                  }}
                 >
                   회원가입
                 </Link>

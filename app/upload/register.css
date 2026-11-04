@@ -1,0 +1,8 @@
+.pz-register-form { display: grid; gap: 16px; max-width: 540px; margin-block: 16px; }
+.pz-register-form label { display: grid; gap: 6px; font-weight: 650; }
+.pz-register-form input { padding: 10px; border: 1px solid var(--pz-border); border-radius: 8px; background: var(--pz-preview); min-width: 0; }
+.pz-register-form input::file-selector-button { color: var(--pz-fg); margin-right: 10px; }
+.pz-register-form button { justify-self: start; }
+.pz-register-form button:disabled { opacity: .55; }
+.pz-register-item { border-top: 1px solid var(--pz-border); padding-top: 14px; margin-top: 18px; }
+.pz-register-item h3 { font-size: 18px; font-weight: 750; }

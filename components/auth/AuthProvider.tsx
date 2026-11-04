@@ -88,9 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(errorMsg);
     }
 
-    const data = (await res.json()) as Member;
-    setUser(data);
-    return data;
+    return (await res.json()) as Member;
   };
 
   const logout = async (): Promise<void> => {

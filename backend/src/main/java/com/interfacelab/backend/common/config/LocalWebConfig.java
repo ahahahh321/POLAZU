@@ -16,6 +16,13 @@ public class LocalWebConfig implements WebMvcConfigurer {
 				.allowCredentials(true)
 				.maxAge(600);
 
+		registry.addMapping("/api/community/**")
+				.allowedOrigins("http://127.0.0.1:3000", "http://localhost:3000")
+				.allowedMethods("GET", "PUT", "POST", "OPTIONS")
+				.allowedHeaders("Content-Type")
+				.allowCredentials(true)
+				.maxAge(600);
+
 		registry.addMapping("/api/editor/**")
 				.allowedOrigins("http://127.0.0.1:3000", "http://localhost:3000")
 				.allowedMethods("POST", "OPTIONS")

@@ -1,0 +1,22 @@
+.pz-lab { padding-block: 48px 70px; }
+.pz-lab h1 { font-size: clamp(46px, 8vw, 80px); font-weight: 900; letter-spacing: -.06em; }
+.pz-lab p { color: var(--pz-muted); }
+.pz-lab .pz-lab-kicker { color: var(--pz-accent); font-size: 13px; font-weight: 800; letter-spacing: .1em; }
+.pz-lab-panel { padding: clamp(16px, 3vw, 28px); margin-top: 22px; border: 1px solid var(--pz-border); border-radius: 12px; background: var(--pz-surface); }
+.pz-lab-panel h2 { font-size: 22px; font-weight: 850; margin-bottom: 8px; }
+.pz-lab-controls, .pz-lab-downloads { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-block: 16px; }
+.pz-lab-controls select { margin-left: 4px; padding: 6px; border: 1px solid var(--pz-border); border-radius: 6px; background: var(--pz-preview); color: var(--pz-fg); }
+.pz-lab-count { color: var(--pz-lime); background: #22251b; border-radius: 20px; padding: 4px 9px; margin-left: 12px; font-size: 12px; }
+.pz-lab-matrix { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 12px; margin-top: 18px; }
+.pz-lab-size { padding: 14px; border: 1px solid var(--pz-border); border-radius: 8px; background: var(--pz-bg); }
+.pz-lab-size h3 { font-weight: 800; color: var(--pz-accent); }
+.pz-lab-variant { margin-top: 14px; }
+.pz-lab-variant h4 { text-transform: capitalize; font-weight: 700; margin-bottom: 8px; }
+.pz-lab-variant > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.pz-lab-sample { display: grid; justify-items: start; gap: 4px; }
+.pz-lab-sample .polazu-button { pointer-events: none; }
+.pz-lab-sample small { color: var(--pz-muted); font-size: 11px; }
+.pz-lab-sample[data-preview="Hover"] .polazu-button { background: var(--button-hover); }
+.pz-lab-sample[data-preview="Pressed"] .polazu-button { background: var(--button-active); }
+.pz-lab-sample[data-preview="Focus"] .polazu-button { outline: 2px solid #d4ff3f; outline-offset: 2px; }
+.pz-lab-panel pre { overflow: auto; padding: 14px; background: var(--pz-preview); border-radius: 8px; font-size: 13px; }

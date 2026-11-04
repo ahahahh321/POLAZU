@@ -1,0 +1,54 @@
+.pz-home[data-auth-open] > :is(main, footer, .pz-register-fab) {
+  filter: blur(8px);
+  opacity: .42;
+  pointer-events: none;
+}
+.pz-auth-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  border: 1px solid var(--pz-border);
+  border-radius: 20px;
+  background: var(--pz-surface);
+  color: var(--pz-fg);
+  overflow: hidden;
+  box-shadow: 0 22px 60px rgb(0 0 0 / 18%);
+}
+.pz-auth-dialog[data-mode="signup"] { width: min(680px, calc(100vw - 32px)); }
+.pz-auth-dialog::backdrop { background: transparent; }
+.pz-auth-scroll {
+  max-height: calc(100dvh - 34px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--pz-wire) transparent;
+}
+.pz-auth-dialog .auth-card {
+  max-width: none;
+  border: 0;
+  box-shadow: none;
+  animation: none;
+  background:
+    radial-gradient(ellipse 74% 180px at 14% 0%, color-mix(in srgb, var(--pz-orange) 16%, transparent), transparent 100%),
+    radial-gradient(ellipse 66% 160px at 92% 0%, color-mix(in srgb, var(--pz-lime) 11%, transparent), transparent 100%),
+    var(--pz-surface);
+}
+.pz-auth-dialog .auth-header { margin-bottom: 24px; }
+.pz-auth-dialog .auth-brand { width: 144px; margin-bottom: 10px; }
+.pz-auth-dialog .auth-footer-text { margin-top: 20px; }
+.pz-auth-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--pz-preview);
+  color: var(--pz-fg);
+  font-size: 23px;
+  z-index: 1;
+}
+.pz-auth-close:hover { color: var(--pz-accent); }

@@ -1,0 +1,3 @@
+.polazu-brand { display: inline-flex; align-items: center; flex-shrink: 0; }
+.polazu-brand img { display: block; width: 100%; height: auto; filter: contrast(3) invert(1); mix-blend-mode: screen; }
+[data-theme="light"] .polazu-brand img { filter: contrast(3); mix-blend-mode: multiply; }
